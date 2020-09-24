@@ -51,7 +51,7 @@ class KinkAgent(Agent.Movies):
     # add channels to genres
     # add other tags to collections
     metadata.collections.clear()
-    tags = html.xpath('//div[@class="shoot-info"]//a[starts-with(@href,"/tag/")]')
+    tags = html.xpath('//p[@class="tag-list category-tag-list"]//a[starts-with(@href,"/tag/")]')
     for tag in tags:
       if tag.get('href').endswith(':channel'):
         if not metadata.studio:
@@ -69,9 +69,9 @@ class KinkAgent(Agent.Movies):
     # set episode ID as tagline for easy visibility
     metadata.tagline = metadata.studio + " – " + metadata.id
 
-    # set movie release date to shoot release date
+    # NOT WORKING:  set movie release date to shoot release date
     try:
-      release_date = html.xpath('//div[@class="shoot-info"]//p[starts-with(normalize-space(.),"Date:")]')[0].text_content().replace('Date: ', '')
+      release_date = html.xpath('//span[@class="shoot-date"]/text_content()')
       metadata.originally_available_at = Datetime.ParseDate(release_date).date()
       metadata.year = metadata.originally_available_at.year
     except: pass
@@ -83,7 +83,7 @@ class KinkAgent(Agent.Movies):
       metadata.posters[thumbpUrl] = Proxy.Media(thumbp)
     except: pass
     
-    # fill movie art with all images, so they can be used as backdrops
+    # NOT WORKING: fill movie art with all images, so they can be used as backdrops 
     try:
       imgs = html.xpath('//div[@id="previewImages"]//img')
       for img in imgs:
@@ -95,7 +95,7 @@ class KinkAgent(Agent.Movies):
     # summary
     try:
       metadata.summary = ""
-      summary = html.xpath('//div[@class="shoot-info"]/div[@class="description"]')
+      summary = html.xpath('//p[@class="description-text"]')
       if len(summary) > 0:
         for paragraph in summary:
           metadata.summary = metadata.summary + paragraph.text_content().strip().replace('<br>',"\n") + "\n"
@@ -105,7 +105,7 @@ class KinkAgent(Agent.Movies):
     # director
     try:
       metadata.directors.clear()
-      director_name = html.xpath('//div[@class="shoot-info"]//p[@class="director"]/a/text()')[0]
+      director_name = html.xpath('//span[@class="director-name"]/a/text()')[0]
       try:
         director = metadata.directors.new()
         director.name = director_name
@@ -117,11 +117,11 @@ class KinkAgent(Agent.Movies):
     
     # starring
     try:
-      starring = html.xpath('//p[@class="starring"]/*[@class="names"]/a')
+      starring = html.xpath('//p[@class="starring"]/*[@class="names h5"]/a')
       metadata.roles.clear()
       for member in starring:
         role = metadata.roles.new()
-        lename = member.text_content().strip()
+        lename = member.text_content().strip().replace(",","")
         try:
           role.name = lename
         except:
@@ -134,5 +134,5 @@ class KinkAgent(Agent.Movies):
     try:
       rating_dict = JSON.ObjectFromURL(url=EXC_BASEURL + 'api/ratings/%s' % metadata.id,
                                        headers={'Cookie': 'viewing-preferences=straight%2Cgay'})
-      metadata.rating = float(rating_dict['average']) * 2
+      metadata.rating = float(rating_dict['average-rating']) * 2
     except: pass
